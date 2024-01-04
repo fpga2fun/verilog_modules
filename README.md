@@ -4,3 +4,7 @@
 直接双击打开openwave.bat文件即可自动生成波形文件。
 
 test
+
+测试markdown换行功能。  
+换行  
+    换行2
