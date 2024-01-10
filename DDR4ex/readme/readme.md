@@ -14,80 +14,80 @@
 > 此处只介绍生产example的步骤，相关过程中的介绍在后续展开详细说明。
 
 1. 找到ip  
-    ![找到MIGip](image-2.png)        
+![找到MIGip](image-2.png)        
 2. 配置ip
 选项说明
-    ![MIG Basic](image-3.png)
-    ![MIG AXI](image-4.png)
+![MIG Basic](image-3.png)
+![MIG AXI](image-4.png)
 3. 生成xilinx自带的仿真example
-    - 等待ip综合完成后打开example
-        ![gen Example](image-5.png)
+- 等待ip综合完成后打开example
+![gen Example](image-5.png)
 4. 仿真
-    - 使用vvd仿真
-      直接开始仿真就行，可以run all，直到仿真自动停止。
-    - 使用vcs仿真
-        ![Export vcs](image-6.png)
-        - 在sim_tb_top.sv加入fsdb选项
-        ```verilog
-        initial
-        begin
-            $fsdbDumpfile("tb.fsdb");
-            $fsdbDumpvars(0,sim_tb_top,"+all");
-        end
-        ```
-        - 修改sim_tb_top.sh
-            加入kdb选项以支持verdi
-            ![vcs kdb](image-7.png)
-            编译时会提示缺少include`文件，需要加入仿真模型
-            ![add include](image-8.png)
-        - bsub -Is ./sim_tb_top.sh &
+- 使用vvd仿真
+直接开始仿真就行，可以run all，直到仿真自动停止。
+- 使用vcs仿真
+![Export vcs](image-6.png)
+- 在sim_tb_top.sv加入fsdb选项
+ ```verilog
+ initial
+ begin
+     $fsdbDumpfile("tb.fsdb");
+     $fsdbDumpvars(0,sim_tb_top,"+all");
+ end
+ ```
+ - 修改sim_tb_top.sh
+ 加入kdb选项以支持verdi
+ ![vcs kdb](image-7.png)
+ 编译时会提示缺少include`文件，需要加入仿真模型
+ ![add include](image-8.png)
+ - bsub -Is ./sim_tb_top.sh &
 5. 修改ddr4_v2_2_data_gen.sv
-    ```verilog
-          always @ (*) begin
-            lfsr_q_nxt <= lfsr_q;
-            if (pattern_init) begin //pattern initialisation
-            //lfsr_q_nxt <= #TCQ {prbs_seed_i + 32'h55555555};
-            lfsr_q_nxt <= #TCQ {prbs_seed_i + 32'h13572468};
-            end
-            else if (data_en) begin //generate next data packet
-            // lfsr_q_nxt[32:9] <= lfsr_q[31:8];
-            // lfsr_q_nxt[8]    <= lfsr_q[32] ^ lfsr_q[7];
-            // lfsr_q_nxt[7]    <= lfsr_q[32] ^ lfsr_q[6];
-            // lfsr_q_nxt[6:4]  <= lfsr_q[5:3];
-            // 
-            // lfsr_q_nxt[3]    <= lfsr_q[32] ^ lfsr_q[2];
-            // lfsr_q_nxt[2]    <= lfsr_q[1] ;
-            // lfsr_q_nxt[1]    <= lfsr_q[32];
-            lfsr_q_nxt <= lfsr_q + 1;
-            end
+```verilog
+      always @ (*) begin
+        lfsr_q_nxt <= lfsr_q;
+        if (pattern_init) begin //pattern initialisation
+        //lfsr_q_nxt <= #TCQ {prbs_seed_i + 32'h55555555};
+        lfsr_q_nxt <= #TCQ {prbs_seed_i + 32'h13572468};
         end
-    ```
-    > 修改一下自动生成的数据，方便观察axi到dq的数据映射。不改也行。
+        else if (data_en) begin //generate next data packet
+        // lfsr_q_nxt[32:9] <= lfsr_q[31:8];
+        // lfsr_q_nxt[8]    <= lfsr_q[32] ^ lfsr_q[7];
+        // lfsr_q_nxt[7]    <= lfsr_q[32] ^ lfsr_q[6];
+        // lfsr_q_nxt[6:4]  <= lfsr_q[5:3];
+        // 
+        // lfsr_q_nxt[3]    <= lfsr_q[32] ^ lfsr_q[2];
+        // lfsr_q_nxt[2]    <= lfsr_q[1] ;
+        // lfsr_q_nxt[1]    <= lfsr_q[32];
+        lfsr_q_nxt <= lfsr_q + 1;
+        end
+    end
+```
+> 修改一下自动生成的数据，方便观察axi到dq的数据映射。不改也行。
 6. 简单看一下仿真波形
-    - 先关注cmdName信号（设置为ASCII格式），仿真开始后经过一段时间的ACT/NPO后会进行MRS操作（圆圈处），之后init_complete拉高，axi总线动作，开始访问DDR。
-        ![DDR Ob](image-9.png)
+- 先关注cmdName信号（设置为ASCII格式），仿真开始后经过一段时间的ACT/NPO后会进行MRS操作（圆圈处），之后init_complete拉高，axi总线动作，开始访问DDR。
+![DDR Ob](image-9.png)
 # DDR基础知识
 - 半导体存储概念
-    ![Memory](image-10.png)
+![Memory](image-10.png)
 - 认识DDR 内存条
-    ![DDR ex](image-11.png)
-    以一根DDR内存条为例，从大到小的层级结构依次是：channel ＞ DIMM ＞ rank ＞ chip ＞ bank ＞ row/column。
-    channel （对应多个DDR控制器）> DIMM（内存插槽） > rank（一次访问位宽决定，也成物理bank） > chip（1个chip大多是4bit/8bit/16bit等，由多个chip组成一个rank，配合完成一次访问的位宽要求。这就是颗粒。） > bank（颗粒里的logic-bank，DDR3一般对应8个bank存储体） > row/column。
-    ![DDR level](image-12.png)
+![DDR ex](image-11.png)
+以一根DDR内存条为例，从大到小的层级结构依次是：channel ＞ DIMM ＞ rank ＞ chip ＞ bank ＞ row/column。
+channel （对应多个DDR控制器）> DIMM（内存插槽） > rank（一次访问位宽决定，也成物理bank） > chip（1个chip大多是4bit/8bit/16bit等，由多个chip组成一个rank，配合完成一次访问的位宽要求。这就是颗粒。） > bank（颗粒里的logic-bank，DDR3一般对应8个bank存储体） > row/column。
+![DDR level](image-12.png)
 - DDR Page的概念和理解
-    - DDR页的概念，是针对刷新或者访问来说的，举例，一个rank可能有4个chip组成，一个chip里可能有8个bank，每一个bank有N个行。页指的是一个rank里每个chip里的所有bank的某个行地址；注意不是一行，是多行，行数是chip数目*bank数目。
-    - 所以，DDR页，可以理解为一个rank里每个chip（所有bank）的行地址
-    - 在一个rank里，每个chip的地址是相同的。因为多个chip组成一个总数据位宽。DDR接口的cs信号，虽然叫chip select，其实是rank（一组chip）的 select。
-    - DDR页的概念，会涉及页命中、页miss等，跟cache page原理一样。
+- DDR页的概念，是针对刷新或者访问来说的，举例，一个rank可能有4个chip组成，一个chip里可能有8个bank，每一个bank有N个行。页指的一个rank里每个chip里的所有bank的某个行地址；注意不是一行，是多行，行数是chip数目*bank数目。
+- 所以，DDR页，可以理解为一个rank里每个chip（所有bank）的行地址
+- 在一个rank里，每个chip的地址是相同的。因为多个chip组成一个总数据位宽。DDR接口的cs信号，虽然叫chip select，其实是rank（一chip）的 select。
+- DDR页的概念，会涉及页命中、页miss等，跟cache page原理一样。
 # MIG 配置说明
 > 参考pg150
 1. Mode & Interface
-    从左往右分别为：
-    - 用户逻辑层：要送进DDR存储起来的数据源，比如CMOS，ADC等模块采集的数据集；
-    - 用户接口层： xilinx mig有user interface和AXI4可选，此处使用AXI4；
-    - 控制器层：[Memory Controller](#memory-controller)
-    - PHY 层：[Phy](#phy)
-    - DDR SDRAM: 实际接的内存芯片，仿真中使用的是sv写的仿真模型。
+从左往右分别为：
+- 用户逻辑层：要送进DDR存储起来的数据源，比如CMOS，ADC等模块采集的数据集；
+- 用户接口层： xilinx mig有user interface和AXI4可选，此处使用AXI4；
+- 控制器层：[Memory Controller](#memory-controller)
+- PHY 层：[Phy](#phy)
+- DDR SDRAM: 实际接的内存芯片，仿真中使用的是sv写的仿真模型。
 2. Clocking
 Memory Device Interface Speed指实际的内存芯片使用的时钟，对应ddr4_ck_c/t信号，是一对差分时钟。
 在MT40A256M16GE 的文档中可以看到083E速度等级对应的是2400MT/s数据传输速率，这个指的是每秒钟可以进行2400M次传输，因为DDR会在c/t时钟各自的上升沿分别传输一次，所以实际时钟频率为2400M/2=1200MHz=833ps。
@@ -98,7 +98,7 @@ Ref Input Clk 可以自由选择，对应该MIG使用的系统时钟 c0_sys_clk_
 ![DDR CLK](image-16.png)
 ![Sys CLK](image-17.png)
 3. Memory Option
-    保持默认，具体参考DDRJEDEC
+保持默认，具体参考DDRJEDEC
 4. Controller Option
 MEM类型本例中选择MT40A256M16GE-083E,地址关系如下：
 ![MT40 ADDR](image-18.png)
