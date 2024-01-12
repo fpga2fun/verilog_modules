@@ -28,19 +28,19 @@
 > 此处只介绍生产example的步骤，相关过程中的介绍在后续展开详细说明。
 
 1. 找到ip  
-![找到MIGip](\pic\image-2.png)        
+![找到MIGip](image-2.png)        
 2. 配置ip
 选项说明
-![MIG Basic](\pic\image-3.png)
-![MIG AXI](\pic\image-4.png)
+![MIG Basic](image-3.png)
+![MIG AXI](image-4.png)
 3. 生成xilinx自带的仿真example
 - 等待ip综合完成后打开example
-![gen Example](\pic\image-5.png)
+![gen Example](image-5.png)
 4. 仿真
 - 使用vvd仿真
 直接开始仿真就行，可以run all，直到仿真自动停止。
 - 或者使用vcs仿真
-![Export vcs](\pic\image-6.png)
+![Export vcs](image-6.png)
 - 在sim_tb_top.sv加入fsdb选项
  ```verilog
  initial
@@ -51,9 +51,9 @@
  ```
  - 修改sim_tb_top.sh
  加入kdb选项以支持verdi
- ![vcs kdb](\pic\image-7.png)
+ ![vcs kdb](image-7.png)
  编译时会提示缺少include`文件，需要加入仿真模型
- ![add include](\pic\image-8.png)
+ ![add include](image-8.png)
  - bsub -Is ./sim_tb_top.sh &
 5. 修改ddr4_v2_2_data_gen.sv
 ```verilog
@@ -79,15 +79,15 @@
 > 修改一下自动生成的数据，方便观察axi到dq的数据映射。不改也行。
 6. 简单看一下仿真波形
 - 先关注cmdName信号（设置为ASCII格式），仿真开始后经过一段时间的ACT/NPO后会进行MRS操作（圆圈处），之后init_complete拉高，axi总线动作，开始访问DDR。
-![DDR Ob](\pic\image-9.png)
+![DDR Ob](image-9.png)
 # DDR基础知识
 - 半导体存储概念
-![Memory](\pic\image-10.png)
+![Memory](image-10.png)
 - 认识DDR 内存条
-![DDR ex](\pic\image-11.png)
+![DDR ex](image-11.png)
 以一根DDR内存条为例，从大到小的层级结构依次是：channel ＞ DIMM ＞ rank ＞ chip ＞ bank ＞ row/column。
 channel （对应多个DDR控制器）> DIMM（内存插槽） > rank（一次访问位宽决定，也成物理bank） > chip（1个chip大多是4bit/8bit/16bit等，由多个chip组成一个rank，配合完成一次访问的位宽要求。这就是颗粒。） > bank（颗粒里的logic-bank，DDR3一般对应8个bank存储体） > row/column。
-![DDR level](\pic\image-12.png)
+![DDR level](image-12.png)
 - DDR Page的概念和理解
 - DDR页的概念，是针对刷新或者访问来说的，举例，一个rank可能有4个chip组成，一个chip里可能有8个bank，每一个bank有N个行。页指的一个rank里每个chip里的所有bank的某个行地址；注意不是一行，是多行，行数是chip数目*bank数目。
 - 所以，DDR页，可以理解为一个rank里每个chip（所有bank）的行地址
@@ -105,17 +105,17 @@ channel （对应多个DDR控制器）> DIMM（内存插槽） > rank（一次�
 2. Clocking
 Memory Device Interface Speed指实际的内存芯片使用的时钟，对应ddr4_ck_c/t信号，是一对差分时钟。
 在MT40A256M16GE 的文档中可以看到083E速度等级对应的是2400MT/s数据传输速率，这个指的是每秒钟可以进行2400M次传输，因为DDR会在c/t时钟各自的上升沿分别传输一次，所以实际时钟频率为2400M/2=1200MHz=833ps。
-![MT40 timing para](\pic\image-14.png)
+![MT40 timing para](image-14.png)
 PHY to controller click frequency ratio 固定为4:1;即Memory Controller的时钟为1200M/4=300MHz，也是用户接口层使用的时钟，ui_clk；
 Ref Input Clk 可以自由选择，对应该MIG使用的系统时钟 c0_sys_clk_p,该example中选的100M；
-![UI CLK](\pic\image-15.png)
-![DDR CLK](\pic\image-16.png)
-![Sys CLK](\pic\image-17.png)
+![UI CLK](image-15.png)
+![DDR CLK](image-16.png)
+![Sys CLK](image-17.png)
 3. Memory Option
 保持默认，具体参考DDRJEDEC
 4. Controller Option
 MEM类型本例中选择MT40A256M16GE-083E,地址关系如下：
-![MT40 ADDR](\pic\image-18.png)
+![MT40 ADDR](image-18.png)
 BankGroup width=1；BankArry width=2；Column width =10；Row width=15；data width=16；
 Page Size = 2^10^*16/8=2KB
 单个颗粒的总大小为 2^10^\*2^15^\*2^2^\*2^1^\*16=256M\*16=4Gb
@@ -123,19 +123,19 @@ Page Size = 2^10^*16/8=2KB
 >参考pg150 P119app_addr词条   
 
 推荐使用ROW_COLUMN_BANK的地址映射关系
-![MEM_ADDR_ORDER](\pic\image-19.png)
+![MEM_ADDR_ORDER](image-19.png)
 5. AXI options
-![AXI Opt](\pic\image-20.png)
-![AXI ADDR Wid](\pic\image-21.png)
+![AXI Opt](image-20.png)
+![AXI ADDR Wid](image-21.png)
 根据公式C_S_AXI_ADDR_WIDTH= 0+15+10+2+1+4-3=29
-![AXI ADDR](\pic\image-22.png)
+![AXI ADDR](image-22.png)
 C_S_AXI_DATA_WIDTH=16*8=128
 >*axi_address[0]=0;*
 
-![AXI Byte Adr Map](\pic\image-23.png)
+![AXI Byte Adr Map](image-23.png)
 从这张表可以知道，当ddr的数据位宽为16时，AXI地址会在app接口地址上补一个最低位的0，也就是说如果这边不选择axi接口的话，app接口的地址线位宽为28；因为AXI4的数据位宽为128bits(16B),所以在INCR模式下传输时addr会累加16，即每个地址位存放的数据是128/16=8bits；但是映射到DDR的信号时，每个地址存放的是16bits(等同于数据位宽)，也就是说相同地址位的情况下，axi存放的数据量只有ddr存放数据量的1/2,所以要增加1位地址位宽才能使数据量相等。
-![AXI INCR](\pic\image-25.png)
-![app map](\pic\image-24.png)
+![AXI INCR](image-25.png)
+![app map](image-24.png)
 再根据这张表我们可以得到该example中axi的地址在DDR4“row_columan_bank"顺序下的映射关系
 | SDRAM      | axi_addr mapping |
 | ----------- | ----------- |
@@ -149,10 +149,10 @@ C_S_AXI_DATA_WIDTH=16*8=128
 
 ## Memory Controller  
 Memory Controller (MC)接收用户侧发来的地址、数据、控制命令，并通过满足DRAM协议与时序要求的方式，低延迟高效率的发送至PHY。控制器时钟与DRAM时钟的比例为4：1，在每个系统时钟的周期都可以发送一次ACT，CAS，Pre命令。
-![Memory Controller](\pic\image-13.png)
+![Memory Controller](image-13.png)
 ## Phy
 PHY可以看做是连接到外部DDR设备的低层级物理接口，包括校准逻辑用于确保接口本身的可靠操作.PHY可以生成所有需要发送给存储设备的信号时序以及命令排序。也包括上电后发送给SDRAM的初始化逻辑。
-![MIG PHY](\pic\image-26.png)
+![MIG PHY](image-26.png)
 # JEDEC Standard
 ## Pinout Description
 > 标准说明来自JESD79-4
@@ -176,7 +176,7 @@ PHY可以看做是连接到外部DDR设备的低层级物理接口，包括校�
 |DQS_t, DQS_c, DQSU_t, DQSU_c, DQSL_t, DQSL_c | In Out |Data Strobe: 读访问时为输出，与DQ边沿对齐；写访问时为输入，与DQ中心对齐，For the x16, DQSL corresponds to the data on DQL0-DQL7; DQSU corresponds to the data on DQU0-DQU7. |
 
 ## State Diagram Command Definitions
-![State Command](\pic\image-27.png)
+![State Command](image-27.png)
 
 ## Basic Functional Description
 对于存储设备的读写访问是基于突发传输的。访问从选定的地址开始，连续访问一个突发长度的地址，突发长度可以由寄存器配置为BL（burst length）=8,或者BC（burst chop）=4两种模式。访问设备前，先要执行ACT命令，随后是读或者写命令。与ACT命令一同设置的adr信号用于选择要访问的bank，bankgroup，row地址。与读写命令一起设置的adr信号用于选择column地址。并通过A10决定是否需要auto precharge。A12选择BC4或者BL8模式（on the fly OTF mode），前提是在模式寄存器中配置过。
@@ -188,13 +188,13 @@ PHY可以看做是连接到外部DDR设备的低层级物理接口，包括校�
 6. 可以使用 RDA（自动预充电读取）和 WRA（自动预充电写入）命令，而不是发出显式 PRECHARGE 命令来停用行。这些命令告诉 DRAM 在读取或写入操作完成后自动停用/预充电行。由于列地址只使用地址位A0-A9，A10在CAS期间是一个未使用的位，它被重载以指示自动预充电。
 ## RESET and Initialization Procedure
 依据文档说明，上电释放复位信号后激活CKE，随后依次配置MR3,6,5,4,2,1,0。然后发送ZQCL校准命令，等待tDLLK和tZQ初始化完成。
-![Init](\pic\image-28.png)
-![verdi init](\pic\image-33.png)
+![Init](image-28.png)
+![verdi init](image-33.png)
 
 所有的时间参数均可在JDEC最后的附录找到，以tZQin为例；
-![time parameter](\pic\image-29.png)
+![time parameter](image-29.png)
 仿真波形中 发送ZQCL命令后1029个cycle 拉高init_calib_complete 信号，符合文档说明；
-![Init Zqcl](\pic\image-30.png)
+![Init Zqcl](image-30.png)
 
 ## Register Definition
 ### Programming Mode Registers
@@ -204,42 +204,42 @@ DDR4 SDRAM提供了许多特性、功能和设置，可以使用7个模式寄存
 | tMRD |MRS命令周期时间。它是完成对模式寄存器的WRITE操作所需的时间，也是tMRD时序图中显示的两个MRS命令之间所需的最小时间。|
 |tMOD | 是指从一个MRS命令到一个非MRS命令所需的最短时间，不包括DES。|
 
-![tMRD](\pic\image-31.png)
-![tMOD](\pic\image-32.png)
+![tMRD](image-31.png)
+![tMOD](image-32.png)
 ###  Mode Register 
 此处依照初始化配置的顺序MR3,6,5,4,2,1,0来说明。参考真值表，当ACT为1，CS，RAS，CAS，WE为0时进入MRS模式。
 - MR3
-![MR3](\pic\image-34.png)
-![MR3 A9](\pic\image-35.png)
-![verdi MR3654](\pic\image-37.png)
-![verdi MR210](\pic\image-42.png)
-![verd MR3](\pic\image-36.png)
+![MR3](image-34.png)
+![MR3 A9](image-35.png)
+![verdi MR3654](image-37.png)
+![verdi MR210](image-42.png)
+![verd MR3](image-36.png)
 该example中MR3只配置了A9=1；CRC+DM Write Command Latency = 5n Cycle；
 - MR6
-![MR6](\pic\image-38.png)
-![MR6 A11](\pic\image-39.png)
+![MR6](image-38.png)
+![MR6 A11](image-39.png)
 A11=1 ,tCCD_L=6;
 - MR5
-![MR5](\pic\image-40.png)
+![MR5](image-40.png)
 A10=1 ,使能DM。关闭DBI；
 - MR4
-![MR4 ](\pic\image-41.png)
+![MR4 ](image-41.png)
 CMD (CAL) address latency =0
 - MR2
-![MR2 ](\pic\image-43.png)
+![MR2 ](image-43.png)
 A3=1，A4=1 CWL=12,CWL具体含义在读写时序中介绍。
-![CWL ](\pic\image-44.png)
-![CWL v](\pic\image-45.png)
+![CWL ](image-44.png)
+![CWL v](image-45.png)
 - MR1
-![MR1 ](\pic\image-46.png)
+![MR1 ](image-46.png)
 Additive Latency AL = 0 ；
 - MR0
-![MR0](\pic\image-47.png)
+![MR0](image-47.png)
 BL = 8；CL=17；
-![CL](\pic\image-48.png)
-![WR/RTP](\pic\image-49.png)
+![CL](image-48.png)
+![WR/RTP](image-49.png)
 ## Command Truth Table
-![Command Truth Table](\pic\image-50.png)
+![Command Truth Table](image-50.png)
 ### ACTIVATE Command
 activate命令用于打开(激活)特定bank中的一行（Row），以供后续访问。该Row会保持激活状态直到向该bank发送precharge命令。当需要访问同一bank不同row时，必须先发送precharge命令以取消激活，这是因为一个bank中只有一组用于提取电压信号的感应放大器。在ACT命令中有3个关键参数。
 |parameter | Functional description|
@@ -248,21 +248,21 @@ activate命令用于打开(激活)特定bank中的一行（Row），以供后续
 |tRRD_L|如果bank属于同一个bank group，则它们的 ACTIVATE 必须由 tRRD_L （row-to-row delay--long）分隔。|
 |tFAW |fifth activate window tFAW 指定一个窗口，在该窗口内只能发出四个激活命令。因此，你可以在它们之间使用 tRRD_S 背靠背发出 ACTIVATE 命令，但是一旦你完成了 4 次激活，在 tFAW 窗口到期之前，你无法再发出另一个。|
 
-![tRRD](\pic\image-51.png) 
-![tRRD_S](\pic\image-52.png)
+![tRRD](image-51.png) 
+![tRRD_S](image-52.png)
 Notes: 1. Maximum limit not applicable.
 在镁光的协议中没有规定tRRD 的最大值，只规定了DDR4-2400的tRRR_S/L min=4cycles tFAW=28cycles
-![tRRD timing](\pic\image-53.png)
+![tRRD timing](image-53.png)
 我们看一下example中的设定,这几个参数在mig中写为了固定值
-![ddr4 ](\pic\image-55.png)
+![ddr4 ](image-55.png)
 在实际波形中可以看到，在xilinx的控制器中并没有区分是否为相同BG，而是将tRRD统一使用8个cycle(大于7就行)。
-![RRD](\pic\image-56.png)
+![RRD](image-56.png)
 第1次和第5次ACT命令之间间隔40个cycyle（大于37）
-![FAW 1](\pic\image-73.png)
+![FAW 1](image-73.png)
 
 ### PRECHARGE Command
 PRECHARGE命令用于取消激活某个bank中已激活的row或所有bank中已经激活的row。在PRE命令发送的一个特定时间(tRP)后，可以发送ACT命令继续访问。
-![tRP](\pic\image-58.png)
+![tRP](image-58.png)
 tRP=13.32ns
 有一种例外情况是同时发生了auto precharge，此时只要不打断当前的数据传输以及违反其他时序参数，允许向不同bank发送读写访问请求。
 在一个bank precharge完成后将进入idel状态，在进行任何读写访问前，需要先发送ACT请求。
@@ -277,18 +277,18 @@ tRP=13.32ns
 |tRP|预充电时间。在应用 REFRESH 命令之前，必须对bank进行预充电并在 tRP 期间处于空闲状态|
 |tRFC |REFRESH 命令和下一个有效命令之间的延迟，DES 除外|
 
-![REF](\pic\image-59.png)
+![REF](image-59.png)
 MR3中可以设置刷新模式
-![MR3 REF](\pic\image-60.png)
+![MR3 REF](image-60.png)
 附录中有规定 tREF值
-![REF P](\pic\image-61.png)
+![REF P](image-61.png)
 在MIG中 REF和REFI是固定值
-![MIG REF](\pic\image-62.png)
-![PRE REF](\pic\image-63.png)
+![MIG REF](image-62.png)
+![PRE REF](image-63.png)
 在执行REF前，先执行PRE，时间间隔为13.328ns 与tRP对应
-![REF ](\pic\image-64.png)
+![REF ](image-64.png)
 在执行REF后322个cycle再执行其他命令，322>tRFC
-![REFI](\pic\image-65.png)
+![REFI](image-65.png)
 两次刷新间隔9332cycles
 
 ### READ Operation
@@ -299,9 +299,9 @@ MR3中可以设置刷新模式
 |RL (Read Latency) |这是整体读取延迟，定义为 RL = CL + AL|
 |tCCD_S & tCCD_L|与同一bank组内的bank存取相比，不同bank组的bank存取需要较少的存取时间延迟。<br>对不同bank组的bank访问需要在命令之间有tCCD_S（或更短）延迟，<br>而同一bank组内的bank访问需要在命令之间有tCCD_L（或更长）延迟|
 
-![READ ](\pic\image-71.png)
+![READ ](image-71.png)
 example中 AL=0，CL=17，BL=8；
-![READ verdi](\pic\image-72.png)
+![READ verdi](image-72.png)
 
 ### WRITE Operation
 |parameter | Functional description|
@@ -311,11 +311,11 @@ example中 AL=0，CL=17，BL=8；
 |WL |(Write Latency)这是整体写入延迟，定义为 WL = CWL + AL|
 |tCCD_S/L|与同一bank组内的bank存取相比，不同bank组的bank存取需要较少的存取时间延迟。<br>对不同bank组的bank访问需要在命令之间有tCCD_S（或更短）延迟，<br>而同一bank组内的bank访问需要在命令之间有tCCD_L（或更长）延迟|
 
-![Write ](\pic\image-66.png)
+![Write ](image-66.png)
 example中 AL=0 ，CWL=12，BL=8；在第一笔写命令中，WL=CWL+AL=12符合预期。
 tWPRE=1 tCK,tWPST=0.5 tCK;在MRS中配置了1tCK模式的premble；
-![Wr1](\pic\image-67.png)
-![CCD ](\pic\image-68.png)
+![Wr1](image-67.png)
+![CCD ](image-68.png)
 连续写时，两个写命令之间需要间隔tCCD, 本example中tCCD_S=4,tCCD_L=6(MR1配置)；
-![CCD_S](\pic\image-69.png)
-![Wr CCD](\pic\image-70.png)
+![CCD_S](image-69.png)
+![Wr CCD](image-70.png)
