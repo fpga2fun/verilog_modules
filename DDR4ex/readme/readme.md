@@ -241,11 +241,11 @@ BL = 8；CL=17；
 ## Command Truth Table
 ![Command Truth Table](\pic\image-50.png)
 ### ACTIVATE Command
-activate命令用于打开(激活)特定bank中的一行（Row），以供后续访问。该Row会保持激活状态直到向该bank发送precharge命令。当需要访问同一bank不同row时，必须先发送precharge命令以取消激活，这是因为一个bank中只有一组用于提取电压信号的感应放大器。在ACT命令中有3个关键参数，
+activate命令用于打开(激活)特定bank中的一行（Row），以供后续访问。该Row会保持激活状态直到向该bank发送precharge命令。当需要访问同一bank不同row时，必须先发送precharge命令以取消激活，这是因为一个bank中只有一组用于提取电压信号的感应放大器。在ACT命令中有3个关键参数。
 |parameter | Functional description|
 | ----| ----|
 |tRRD_S |当向不同 bank group 的 bank 发出连续的 ACTIVATE 命令时，ACTIVATE 命令必须用 tRRD_S 分隔（row-to-row delay--short）|
-|tRRD_L|如果bank属于同一个bank group，则它们的 ACTIVATE 必须由 tRRD_L （row-to-row delay--long）分隔|
+|tRRD_L|如果bank属于同一个bank group，则它们的 ACTIVATE 必须由 tRRD_L （row-to-row delay--long）分隔。|
 |tFAW |fifth activate window tFAW 指定一个窗口，在该窗口内只能发出四个激活命令。因此，你可以在它们之间使用 tRRD_S 背靠背发出 ACTIVATE 命令，但是一旦你完成了 4 次激活，在 tFAW 窗口到期之前，你无法再发出另一个。|
 
 ![tRRD](\pic\image-51.png) 
@@ -293,11 +293,11 @@ MR3中可以设置刷新模式
 
 ### READ Operation
 |parameter | Functional description|
-| ----| ----|
-|CL (CAS Latency) |CAS 是 Column-Address-Strobe， CL 是内部 READ 命令与输出数据的第一bit可用之间的延迟，以时钟周期为单位。它在 MR0 模式寄存器中定义。 SDRAM 数据表通常会具体说明需要为特定操作频率设置的 CL|
-|AL (Additive Latency)|通过AL，设备允许在ACTIVATE命令后立即发出WRITE命令。该命令在设备内部发出前会被保留AL的时间。支持这一功能是为了维持设备中更高的带宽/速度。|
+| :----| :----|
+|CL (CAS Latency) |CAS 是 Column-Address-Strobe， <br>CL 是内部 READ 命令与输出数据的第一bit可用之间的延迟，以时钟周期为单位。<br>它在 MR0 模式寄存器中定义。 <br>SDRAM 数据表通常会具体说明需要为特定操作频率设置的 CL|
+|AL (Additive Latency)|通过AL,设备允许在ACTIVATE命令后立即发出WRITE命令。<br>该命令在设备内部发出前会被保留AL的时间。<br>支持这一功能是为了维持设备中更高的带宽/速度|
 |RL (Read Latency) |这是整体读取延迟，定义为 RL = CL + AL|
-|tCCD_S & tCCD_L|与同一bank组内的bank存取相比，不同bank组的bank存取需要较少的存取时间延迟。对不同bank组的bank访问需要在命令之间有tCCD_S（或更短）延迟，而同一bank组内的bank访问需要在命令之间有tCCD_L（或更长）延迟。|
+|tCCD_S & tCCD_L|与同一bank组内的bank存取相比，不同bank组的bank存取需要较少的存取时间延迟。<br>对不同bank组的bank访问需要在命令之间有tCCD_S（或更短）延迟，<br>而同一bank组内的bank访问需要在命令之间有tCCD_L（或更长）延迟|
 
 ![READ ](\pic\image-71.png)
 example中 AL=0，CL=17，BL=8；
@@ -305,11 +305,11 @@ example中 AL=0，CL=17，BL=8；
 
 ### WRITE Operation
 |parameter | Functional description|
-| ----| ----|
-|CWL (CAS Write Latency) |CWL是内部WRITE命令与输入数据的第1 bit可用之间的延迟，以时钟周期为单位。它被定义在模式寄存器MR2中。|
-|AL (Additive Latency)|通过AL，设备允许在ACTIVATE命令后立即发出WRITE命令。该命令在设备内部发出前会被保留AL的时间。支持这一功能是为了维持设备中更高的带宽/速度。|
-|WL (Write Latency) |这是整体写入延迟，定义为 WL = CWL + AL|
-|tCCD_S & tCCD_L|与同一bank组内的bank存取相比，不同bank组的bank存取需要较少的存取时间延迟。对不同bank组的bank访问需要在命令之间有tCCD_S（或更短）延迟，而同一bank组内的bank访问需要在命令之间有tCCD_L（或更长）延迟。|
+|  :----------| :-------|
+|CWL  |(CAS Write Latency)CWL是内部WRITE命令与输入数据的第1 bit可用之间的延迟，<br>以时钟周期为单位。<br>它被定义在模式寄存器MR2中|
+|AL |(Additive Latency)通过AL，设备允许在ACTIVATE命令后立即发出WRITE命令。<br>该命令在设备内部发出前会被保留AL的时间。<br>支持这一功能是为了维持设备中更高的带宽/速度|
+|WL |(Write Latency)这是整体写入延迟，定义为 WL = CWL + AL|
+|tCCD_S/L|与同一bank组内的bank存取相比，不同bank组的bank存取需要较少的存取时间延迟。<br>对不同bank组的bank访问需要在命令之间有tCCD_S（或更短）延迟，<br>而同一bank组内的bank访问需要在命令之间有tCCD_L（或更长）延迟|
 
 ![Write ](\pic\image-66.png)
 example中 AL=0 ，CWL=12，BL=8；在第一笔写命令中，WL=CWL+AL=12符合预期。
@@ -319,5 +319,3 @@ tWPRE=1 tCK,tWPST=0.5 tCK;在MRS中配置了1tCK模式的premble；
 连续写时，两个写命令之间需要间隔tCCD, 本example中tCCD_S=4,tCCD_L=6(MR1配置)；
 ![CCD_S](\pic\image-69.png)
 ![Wr CCD](\pic\image-70.png)
-
-
