@@ -16,6 +16,10 @@
         - [Mode Register](#mode-register)
     - [Command Truth Table](#command-truth-table)
         - [ACTIVATE Command](#activate-command)
+        - [PRECHARGE Command](#precharge-command)
+        - [REFRESH Command](#refresh-command)
+        - [READ Operation](#read-operation)
+        - [WRITE Operation](#write-operation)
 
 <!-- /TOC -->
 # 基于xilinx MIG DDR4 axi4访问example  
@@ -166,7 +170,7 @@ PHY可以看做是连接到外部DDR设备的低层级物理接口，包括校�
 |BG0 - BG1   | In   |在执行ACT，READ ，WRITE，Precharge命令时决定支持的BankGroup，BG0在MRS命令中决定访问哪个模式寄存器。X4/8有BG0和BG1，但X16只有BG0|
 |BA0 - BA1  |In | Bank Address Inputs ：在执行ACT，READ ，WRITE，Precharge命令时决定支持的Bank，在MRS命令中决定访问哪个模式寄存器。|
 |A0 - A17 | In | 为ACTIVATE Commands提供行地址，为Read/Write命令提供列地址，以便从不同Bank的内存数组中选择一个位置。在MRS命令中也提供操作码。A17 is only defined for the x4 configuration.|
-|A10 / AP   | In | 读/写命令时采样A10，判断是否应在读/写操作后对被访问Bank进行auto Precharge。 (HIGH: Autoprecharge; LOW: no Autoprecharge)。在Precharge命令期间用于确定Precharge是否适用于一个bank(A10)低)或所有银行(A10高)。如果只有一个bank需要precharge，则按bank地址选择。|
+|A10 / AP   | In | 读/写命令时采样A10，判断是否应在读/写操作后对被访问Bank进行auto Precharge。 (HIGH: Autoprecharge; LOW: no Autoprecharge)。在Precharge命令期间用于确定Precharge是否适用于一个bank(A10)低或所有bank(A10高)。如果只有一个bank需要precharge，则按bank地址选择。|
 |A12 / BC_n | In | Burst Chop: 在读和写命令期间采样，以确定是否执行Burst Chop。|
 |DQ | In Out| 双向数据总线|
 |DQS_t, DQS_c, DQSU_t, DQSU_c, DQSL_t, DQSL_c | In Out |Data Strobe: 读访问时为输出，与DQ边沿对齐；写访问时为输入，与DQ中心对齐，For the x16, DQSL corresponds to the data on DQL0-DQL7; DQSU corresponds to the data on DQU0-DQU7. |
@@ -237,3 +241,82 @@ BL = 8；CL=17；
 ## Command Truth Table
 ![Command Truth Table](image-50.png)
 ### ACTIVATE Command
+activate命令用于打开(激活)特定bank中的一行（Row），以供后续访问。该Row会保持激活状态直到向该bank发送precharge命令。当需要访问同一bank不同row时，必须先发送precharge命令以取消激活，这是因为一个bank中只有一组用于提取电压信号的感应放大器。在ACT命令中有3个关键参数，
+|parameter | Functional description|
+| ----| ----|
+|tRRD_S |当向不同 bank group 的 bank 发出连续的 ACTIVATE 命令时，ACTIVATE 命令必须用 tRRD_S 分隔（row-to-row delay--short）|
+|tRRD_L|如果bank属于同一个bank group，则它们的 ACTIVATE 必须由 tRRD_L （row-to-row delay--long）分隔|
+|tFAW |fifth activate window tFAW 指定一个窗口，在该窗口内只能发出四个激活命令。因此，你可以在它们之间使用 tRRD_S 背靠背发出 ACTIVATE 命令，但是一旦你完成了 4 次激活，在 tFAW 窗口到期之前，你无法再发出另一个。|
+
+![tRRD](image-51.png) 
+![tRRD_S](image-52.png)
+Notes: 1. Maximum limit not applicable.
+在镁光的协议中没有规定tRRD 的最大值，只规定了DDR4-2400的tRRR_S/L min=4cycles tFAW=28cycles
+![tRRD timing](image-53.png)
+我们看一下example中的设定,这几个参数在mig中写为了固定值
+![ddr4 ](image-55.png)
+在实际波形中可以看到，在xilinx的控制器中并没有区分是否为相同BG，而是将tRRD统一使用8个cycle(大于7就行)。
+![RRD](image-56.png)
+第1次和第5次ACT命令之间间隔40个cycyle（大于37）
+![FAW](image-57.png)
+
+### PRECHARGE Command
+PRECHARGE命令用于取消激活某个bank中已激活的row或所有bank中已经激活的row。在PRE命令发送的一个特定时间(tRP)后，可以发送ACT命令继续访问。
+![tRP](image-58.png)
+tRP=13.32ns
+有一种例外情况是同时发生了auto precharge，此时只要不打断当前的数据传输以及违反其他时序参数，允许向不同bank发送读写访问请求。
+在一个bank precharge完成后将进入idel状态，在进行任何读写访问前，需要先发送ACT请求。
+在进行读写访问时如果A10信号为高那么会进行auto precharge。该功能会使用RAS的锁存电路来内部延迟precharge操作，直到ARRAY RESTORE操作完成。也就是说在突发访问序列的最后一个数据正确地存储在存储器阵列之后，PRECHARGE操作才会开始。
+
+### REFRESH Command
+刷新命令用于防止动态存储器的存储信息丢失。在发送刷新命令请求时，会由DRAM内部的刷新控制器自动生成地址，所以对于控制方并不需要关心地址。在发送刷新请求前，所有bank必须进行precharge操作并处于idle状态一段时间(tPR)。在刷新完成后，所有的bank也会保持idle状态。在REF命令和下一个有效命令间需要保持一个延迟tRFC。
+通常来说，存储设备需要在平均每个tREFI 期间请求一次REF 命令。但为了减少读写访问期间因为REF操作而造成的性能损失，DDR4允许REF命令推迟。可以推迟的REF 命令次数取决于MR3中配置的刷新模式(1x,2x,4x)。当设备处于1X刷新模式时，最多可以延迟8条REFRESH命令。
+|parameter | Functional description|
+| ----| ----|
+|tREFI |该设备需要 REFRESH 命令的平均间隔为 tREFI|
+|tRP|预充电时间。在应用 REFRESH 命令之前，必须对bank进行预充电并在 tRP 期间处于空闲状态|
+|tRFC |REFRESH 命令和下一个有效命令之间的延迟，DES 除外|
+
+![REF](image-59.png)
+MR3中可以设置刷新模式
+![MR3 REF](image-60.png)
+附录中有规定 tREF值
+![REF P](image-61.png)
+在MIG中 REF和REFI是固定值
+![MIG REF](image-62.png)
+![PRE REF](image-63.png)
+在执行REF前，先执行PRE，时间间隔为13.328ns 与tRP对应
+![REF ](image-64.png)
+在执行REF后322个cycle再执行其他命令，322>tRFC
+![REFI](image-65.png)
+两次刷新间隔9332cycles
+
+### READ Operation
+|parameter | Functional description|
+| ----| ----|
+|CL (CAS Latency) |CAS 是 Column-Address-Strobe， CL 是内部 READ 命令与输出数据的第一bit可用之间的延迟，以时钟周期为单位。它在 MR0 模式寄存器中定义。 SDRAM 数据表通常会具体说明需要为特定操作频率设置的 CL|
+|AL (Additive Latency)|通过AL，设备允许在ACTIVATE命令后立即发出WRITE命令。该命令在设备内部发出前会被保留AL的时间。支持这一功能是为了维持设备中更高的带宽/速度。|
+|RL (Read Latency) |这是整体读取延迟，定义为 RL = CL + AL|
+|tCCD_S & tCCD_L|与同一bank组内的bank存取相比，不同bank组的bank存取需要较少的存取时间延迟。对不同bank组的bank访问需要在命令之间有tCCD_S（或更短）延迟，而同一bank组内的bank访问需要在命令之间有tCCD_L（或更长）延迟。|
+
+![READ ](image-71.png)
+example中 AL=0，CL=17，BL=8；
+![READ verdi](image-72.png)
+
+### WRITE Operation
+|parameter | Functional description|
+| ----| ----|
+|CWL (CAS Write Latency) |CWL是内部WRITE命令与输入数据的第1 bit可用之间的延迟，以时钟周期为单位。它被定义在模式寄存器MR2中。|
+|AL (Additive Latency)|通过AL，设备允许在ACTIVATE命令后立即发出WRITE命令。该命令在设备内部发出前会被保留AL的时间。支持这一功能是为了维持设备中更高的带宽/速度。|
+|WL (Write Latency) |这是整体写入延迟，定义为 WL = CWL + AL|
+|tCCD_S & tCCD_L|与同一bank组内的bank存取相比，不同bank组的bank存取需要较少的存取时间延迟。对不同bank组的bank访问需要在命令之间有tCCD_S（或更短）延迟，而同一bank组内的bank访问需要在命令之间有tCCD_L（或更长）延迟。|
+
+![Write ](image-66.png)
+example中 AL=0 ，CWL=12，BL=8；在第一笔写命令中，WL=CWL+AL=12符合预期。
+tWPRE=1 tCK,tWPST=0.5 tCK;在MRS中配置了1tCK模式的premble；
+![Wr1](image-67.png)
+![CCD ](image-68.png)
+连续写时，两个写命令之间需要间隔tCCD, 本example中tCCD_S=4,tCCD_L=6(MR1配置)；
+![CCD_S](image-69.png)
+![Wr CCD](image-70.png)
+
