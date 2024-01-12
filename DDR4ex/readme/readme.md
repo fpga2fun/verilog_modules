@@ -258,7 +258,7 @@ Notes: 1. Maximum limit not applicable.
 在实际波形中可以看到，在xilinx的控制器中并没有区分是否为相同BG，而是将tRRD统一使用8个cycle(大于7就行)。
 ![RRD](image-56.png)
 第1次和第5次ACT命令之间间隔40个cycyle（大于37）
-![FAW](image-57.png)
+![FAW 1](image-73.png)
 
 ### PRECHARGE Command
 PRECHARGE命令用于取消激活某个bank中已激活的row或所有bank中已经激活的row。在PRE命令发送的一个特定时间(tRP)后，可以发送ACT命令继续访问。
