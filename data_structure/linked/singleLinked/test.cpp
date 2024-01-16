@@ -18,7 +18,6 @@ LinkedList LinkedListInit() {
     return L;
 }
  
- 
 //单链表的建立1，头插法建立单链表
 LinkedList LinkedListCreatH() {
     Node *L;
@@ -122,8 +121,8 @@ int main() {
     //创建 
     LinkedList list;
     printf("请输入单链表的数据：以EOF结尾\n");
-    list = LinkedListCreatH();
-    //list=LinkedListCreatT();
+    //list = LinkedListCreatH();
+    list=LinkedListCreatT();
     printList(list);
      
     //插入 
