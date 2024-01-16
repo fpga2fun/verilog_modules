@@ -37,7 +37,6 @@ LinkedList LinkedListCreatH() {
  
  
 //单链表的建立2，尾插法建立单链表
- 
 LinkedList LinkedListCreatT() {
     Node *L;
     L = (Node *)malloc(sizeof(Node));   //申请头结点空间
@@ -53,13 +52,11 @@ LinkedList LinkedListCreatT() {
         r = p;
     }
     r->next = NULL;
- 
     return L;
 }
  
  
 //单链表的插入，在链表的第i个位置插入x的元素
- 
 LinkedList LinkedListInsert(LinkedList L,int i,int x) {
     Node *pre;                      //pre为前驱结点
     pre = L;
@@ -78,7 +75,6 @@ LinkedList LinkedListInsert(LinkedList L,int i,int x) {
  
  
 //单链表的删除，在链表中删除值为x的元素
- 
 LinkedList LinkedListDelete(LinkedList L,int x) {
     Node *p,*pre;                   //pre为前驱结点，p为查找的结点。
     p = L->next;
