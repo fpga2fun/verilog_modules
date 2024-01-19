@@ -19,7 +19,7 @@ int main(){
     cout<<endl;
 //排序前3 10 9 8 7 6 20//
     li.sort();
-  
+    cout<<"使用sort排序\n"<<' ';
     for(list<int>::iterator it=li.begin();it!=li.end();it++){
         cout<<*it<<' ';
     }
@@ -31,5 +31,15 @@ int main(){
     }
     cout<<endl;
 //自定义排序后 20 10 9 8 7 6 3//
+    li.sort();
+    for(list<int>::iterator it=li.begin();it!=li.end();it++){
+        cout<<*it<<' ';
+    }
+    cout<<endl;
+    li.reverse();
+     for(list<int>::iterator it=li.begin();it!=li.end();it++){
+        cout<<*it<<' ';
+    }       
+    cout<<endl;
     return 0;
 }
