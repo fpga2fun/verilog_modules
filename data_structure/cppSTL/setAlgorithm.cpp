@@ -34,7 +34,7 @@ int main(){
     cout<<endl;
     c.clear();
   
-    set_difference(a.begin(), a.end(), b.begin(), b.end(), back_inserter(c)); //差集 从B中减去A包含的元素
+    set_difference(a.begin(), a.end(), b.begin(), b.end(), back_inserter(c)); //差集 从A中减去B包含的元素
     for(vector<int>::iterator it=c.begin();it!=c.end();it++){
         cout<< *it << ' ';
     }
