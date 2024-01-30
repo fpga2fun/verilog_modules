@@ -1,6 +1,7 @@
 #include<iostream>
 #include<cstring>
-  
+#include<cstdio>
+
 using namespace std;
   
 bool isBF(char * str1,char * str2){
